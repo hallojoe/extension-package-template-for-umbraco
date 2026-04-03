@@ -1,0 +1,18 @@
+﻿{
+    "solutionName":  "Extension Package Template for Umbraco",
+    "solutionDescription":  "Extension package template for Umbraco.",
+    "projectsNamespace":  "Casko.DotNet.Templates.ExtensionPackageTemplateForUmbraco",
+    "gitHubOrganization":  "hallojoe",
+    "repositoryName":  "extension-package-template-for-umbraco",
+    "authorName":  "Casper Korsgaard",
+    "authorOrganizationName":  "hallojoe",
+    "authorOrganizationUrl":  "https://github.com/hallojoe",
+    "authorEmail":  "",
+    "apiName":  "extension-package-template-for-umbraco-api",
+    "apiGroup":  "Extension package template",
+    "apiDescription":  "Extension package template for Umbraco.",
+    "apiOrganizationName":  "hallojoe",
+    "apiOrganizationUrl":  "https://casko.dk/",
+    "apiContactEmail":  "extension-package-template-for-umbraco@localhost",
+    "umbracoTemplateVersion":  "17.3.0"
+}

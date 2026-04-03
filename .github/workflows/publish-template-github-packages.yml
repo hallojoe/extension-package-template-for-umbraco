@@ -1,0 +1,119 @@
+name: Publish dotnet template package to GitHub Packages
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  DOTNET_VERSION: 10.0.x
+  NODE_VERSION: 22
+  SOLUTION_NAME: Umbraco Package Solution
+  PACKAGE_SOURCE: https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json
+
+jobs:
+  publish-template:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Derive and validate package version
+        id: versioning
+        shell: pwsh
+        run: |
+          $tag = "${{ github.event.release.tag_name }}"
+          $targetBranch = "${{ github.event.release.target_commitish }}"
+
+          Write-Host "Release tag: $tag"
+          Write-Host "Target branch: $targetBranch"
+
+          if ($tag -notmatch '^v.+') {
+            throw "Release tag must start with 'v'. Got: $tag"
+          }
+
+          $version = $tag.Substring(1)
+
+          if ($version -notmatch '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z][0-9A-Za-z.-]*)?$') {
+            throw "Derived version is not valid: $version"
+          }
+
+          $isPrerelease = $version.Contains('-')
+
+          if (-not $isPrerelease -and $targetBranch -ne 'main') {
+            throw "Stable releases are only allowed from 'main'. Tag '$tag' targets '$targetBranch'."
+          }
+
+          if ($isPrerelease -and $targetBranch -eq 'main') {
+            throw "Prerelease versions are not allowed from 'main'. Tag '$tag' targets '$targetBranch'."
+          }
+
+          "package_version=$version" >> $env:GITHUB_OUTPUT
+          "is_prerelease=$($isPrerelease.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
+
+          Write-Host "Resolved package version: $version"
+          Write-Host "Prerelease: $isPrerelease"
+
+      - name: Build template package
+        shell: pwsh
+        run: |
+          $artifactsPath = Join-Path $env:GITHUB_WORKSPACE 'artifacts'
+          New-Item -ItemType Directory -Path $artifactsPath -Force | Out-Null
+
+          ./src/create-packaged-template.ps1 `
+            -SolutionName "${{ env.SOLUTION_NAME }}" `
+            -WorkingDirectory "${{ github.workspace }}" `
+            -PackageVersion "${{ steps.versioning.outputs.package_version }}" `
+            -OutputDirectory $artifactsPath `
+            -Force
+
+      - name: Upload package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dotnet-template-package
+          path: ${{ github.workspace }}/artifacts/*.nupkg
+
+      - name: Push package to GitHub Packages
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          $artifactsPath = Join-Path $env:GITHUB_WORKSPACE 'artifacts'
+          $packages = Get-ChildItem -Path $artifactsPath -Filter *.nupkg -File
+
+          if ($packages.Count -eq 0) {
+            throw "No .nupkg files were produced."
+          }
+
+          foreach ($package in $packages) {
+            Write-Host "Pushing $($package.FullName)"
+            dotnet nuget push $package.FullName `
+              --source "${{ env.PACKAGE_SOURCE }}" `
+              --api-key "$env:GITHUB_TOKEN" `
+              --skip-duplicate
+
+            if ($LASTEXITCODE -ne 0) {
+              throw "Failed to push package: $($package.FullName)"
+            }
+          }
+
+      - name: Summarize
+        shell: pwsh
+        run: |
+          Write-Host "Published version: ${{ steps.versioning.outputs.package_version }}"
+          Write-Host "Prerelease: ${{ steps.versioning.outputs.is_prerelease }}"
+          Write-Host "Package source: ${{ env.PACKAGE_SOURCE }}"

@@ -13,6 +13,7 @@ env:
   NODE_VERSION: 22
   SOLUTION_NAME: Umbraco Package Solution
   PACKAGE_SOURCE: https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json
+  NUGET_SOURCE: https://api.nuget.org/v3/index.json
 
 jobs:
   publish-template:
@@ -111,9 +112,34 @@ jobs:
             }
           }
 
+      - name: Push package to NuGet
+        shell: pwsh
+        env:
+          NUGET_API_KEY: ${{ secrets.NG_TOKEN }}
+        run: |
+          $artifactsPath = Join-Path $env:GITHUB_WORKSPACE 'artifacts'
+          $packages = Get-ChildItem -Path $artifactsPath -Filter *.nupkg -File
+
+          if ($packages.Count -eq 0) {
+            throw "No .nupkg files were produced."
+          }
+
+          foreach ($package in $packages) {
+            Write-Host "Pushing $($package.FullName) to NuGet"
+            dotnet nuget push $package.FullName `
+              --source "${{ env.NUGET_SOURCE }}" `
+              --api-key "$env:NUGET_API_KEY" `
+              --skip-duplicate
+
+            if ($LASTEXITCODE -ne 0) {
+              throw "Failed to push package to NuGet: $($package.FullName)"
+            }
+          }
+
       - name: Summarize
         shell: pwsh
         run: |
           Write-Host "Published version: ${{ steps.versioning.outputs.package_version }}"
           Write-Host "Prerelease: ${{ steps.versioning.outputs.is_prerelease }}"
           Write-Host "Package source: ${{ env.PACKAGE_SOURCE }}"
+          Write-Host "NuGet source: ${{ env.NUGET_SOURCE }}"

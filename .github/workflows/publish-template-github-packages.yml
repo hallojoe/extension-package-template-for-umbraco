@@ -112,29 +112,29 @@ jobs:
             }
           }
 
-      - name: Push package to NuGet
-        shell: pwsh
-        env:
-          NUGET_API_KEY: ${{ secrets.NG_TOKEN }}
-        run: |
-          $artifactsPath = Join-Path $env:GITHUB_WORKSPACE 'artifacts'
-          $packages = Get-ChildItem -Path $artifactsPath -Filter *.nupkg -File
+      # - name: Push package to NuGet
+      #   shell: pwsh
+      #   env:
+      #     NUGET_API_KEY: ${{ secrets.NG_TOKEN }}
+      #   run: |
+      #     $artifactsPath = Join-Path $env:GITHUB_WORKSPACE 'artifacts'
+      #     $packages = Get-ChildItem -Path $artifactsPath -Filter *.nupkg -File
 
-          if ($packages.Count -eq 0) {
-            throw "No .nupkg files were produced."
-          }
+      #     if ($packages.Count -eq 0) {
+      #       throw "No .nupkg files were produced."
+      #     }
 
-          foreach ($package in $packages) {
-            Write-Host "Pushing $($package.FullName) to NuGet"
-            dotnet nuget push $package.FullName `
-              --source "${{ env.NUGET_SOURCE }}" `
-              --api-key "$env:NUGET_API_KEY" `
-              --skip-duplicate
+      #     foreach ($package in $packages) {
+      #       Write-Host "Pushing $($package.FullName) to NuGet"
+      #       dotnet nuget push $package.FullName `
+      #         --source "${{ env.NUGET_SOURCE }}" `
+      #         --api-key "$env:NUGET_API_KEY" `
+      #         --skip-duplicate
 
-            if ($LASTEXITCODE -ne 0) {
-              throw "Failed to push package to NuGet: $($package.FullName)"
-            }
-          }
+      #       if ($LASTEXITCODE -ne 0) {
+      #         throw "Failed to push package to NuGet: $($package.FullName)"
+      #       }
+      #     }
 
       - name: Summarize
         shell: pwsh

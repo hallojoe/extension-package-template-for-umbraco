@@ -3,10 +3,10 @@ import type { UmbControllerHost } from "@umbraco-cms/backoffice/controller-api";
 import { UmbContextToken } from "@umbraco-cms/backoffice/context-api";
 import { UmbObjectState } from "@umbraco-cms/backoffice/observable-api";
 import type { UserModel } from "../api/index.js";
-import { __TEMPLATE_WORKSPACE_REPOSITORY_CLASS__ } from "./__TEMPLATE_NAMESPACE_KEBAB__.repository.js";
+import { __TEMPLATE_NAMESPACE_COMPACT__WorkspaceRepository } from "./__TEMPLATE_NAMESPACE_KEBAB__.repository.js";
 
-export const __TEMPLATE_WORKSPACE_CONTEXT_CONSTANT__ =
-  new UmbContextToken<__TEMPLATE_WORKSPACE_CONTEXT_CLASS__>(
+export const __TEMPLATE_NAMESPACE_UPPER_SNAKE__WORKSPACE_CONTEXT =
+  new UmbContextToken<__TEMPLATE_NAMESPACE_COMPACT__WorkspaceContext>(
     "__TEMPLATE_PROJECTS_NAMESPACE__.WorkspaceContext",
   );
 
@@ -15,8 +15,8 @@ type WorkspaceResponse<TData> = {
   error?: unknown;
 };
 
-export class __TEMPLATE_WORKSPACE_CONTEXT_CLASS__ extends UmbContextBase {
-  #repository = new __TEMPLATE_WORKSPACE_REPOSITORY_CLASS__(this);
+export class __TEMPLATE_NAMESPACE_COMPACT__WorkspaceContext extends UmbContextBase {
+  #repository = new __TEMPLATE_NAMESPACE_COMPACT__WorkspaceRepository(this);
 
   #ping = new UmbObjectState<string | undefined>(undefined);
   readonly ping = this.#ping.asObservable();
@@ -37,7 +37,7 @@ export class __TEMPLATE_WORKSPACE_CONTEXT_CLASS__ extends UmbContextBase {
   readonly error = this.#error.asObservable();
 
   constructor(host: UmbControllerHost) {
-    super(host, __TEMPLATE_WORKSPACE_CONTEXT_CONSTANT__);
+    super(host, __TEMPLATE_NAMESPACE_UPPER_SNAKE__WORKSPACE_CONTEXT);
   }
 
   async loadPing() {
@@ -118,4 +118,4 @@ export class __TEMPLATE_WORKSPACE_CONTEXT_CLASS__ extends UmbContextBase {
   }
 }
 
-export default __TEMPLATE_WORKSPACE_CONTEXT_CLASS__;
+export default __TEMPLATE_NAMESPACE_COMPACT__WorkspaceContext;

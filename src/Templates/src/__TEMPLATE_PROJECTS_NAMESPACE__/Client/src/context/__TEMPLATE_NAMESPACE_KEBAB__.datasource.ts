@@ -1,39 +1,39 @@
 import { UmbControllerBase } from "@umbraco-cms/backoffice/class-api";
 import type { UmbControllerHost } from "@umbraco-cms/backoffice/controller-api";
 import {
-  __TEMPLATE_SERVICE_NAME__,
+  __TEMPLATE_NAMESPACE_COMPACT__Service,
 } from "../api/index.js";
 
-export interface __TEMPLATE_DATASOURCE_INTERFACE__ {
-  ping(): ReturnType<typeof __TEMPLATE_SERVICE_NAME__.ping>;
-  whatsMyName(): ReturnType<typeof __TEMPLATE_SERVICE_NAME__.whatsMyName>;
-  whatsTheTimeMrWolf(): ReturnType<typeof __TEMPLATE_SERVICE_NAME__.whatsTheTimeMrWolf>;
-  whoAmI(): ReturnType<typeof __TEMPLATE_SERVICE_NAME__.whoAmI>;
+export interface __TEMPLATE_NAMESPACE_COMPACT__DataSource {
+  ping(): ReturnType<typeof __TEMPLATE_NAMESPACE_COMPACT__Service.ping>;
+  whatsMyName(): ReturnType<typeof __TEMPLATE_NAMESPACE_COMPACT__Service.whatsMyName>;
+  whatsTheTimeMrWolf(): ReturnType<typeof __TEMPLATE_NAMESPACE_COMPACT__Service.whatsTheTimeMrWolf>;
+  whoAmI(): ReturnType<typeof __TEMPLATE_NAMESPACE_COMPACT__Service.whoAmI>;
 }
 
-export class __TEMPLATE_WORKSPACE_DATASOURCE_CLASS__
+export class __TEMPLATE_NAMESPACE_COMPACT__WorkspaceDataSource
   extends UmbControllerBase
-  implements __TEMPLATE_DATASOURCE_INTERFACE__
+  implements __TEMPLATE_NAMESPACE_COMPACT__DataSource
 {
   constructor(host: UmbControllerHost) {
     super(host);
   }
 
   ping() {
-    return __TEMPLATE_SERVICE_NAME__.ping();
+    return __TEMPLATE_NAMESPACE_COMPACT__Service.ping();
   }
 
   whatsMyName() {
-    return __TEMPLATE_SERVICE_NAME__.whatsMyName();
+    return __TEMPLATE_NAMESPACE_COMPACT__Service.whatsMyName();
   }
 
   whatsTheTimeMrWolf() {
-    return __TEMPLATE_SERVICE_NAME__.whatsTheTimeMrWolf();
+    return __TEMPLATE_NAMESPACE_COMPACT__Service.whatsTheTimeMrWolf();
   }
 
   whoAmI() {
-    return __TEMPLATE_SERVICE_NAME__.whoAmI();
+    return __TEMPLATE_NAMESPACE_COMPACT__Service.whoAmI();
   }
 }
 
-export default __TEMPLATE_WORKSPACE_DATASOURCE_CLASS__;
+export default __TEMPLATE_NAMESPACE_COMPACT__WorkspaceDataSource;

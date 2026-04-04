@@ -87,7 +87,17 @@ function Get-RelativePath {
 
     $resolvedBasePath = (Resolve-Path $BasePath).Path
     $resolvedFullPath = (Resolve-Path $FullPath).Path
-    $relativePath = [System.IO.Path]::GetRelativePath($resolvedBasePath, $resolvedFullPath)
+
+    if ([System.IO.Path].GetMethod('GetRelativePath', [type[]]@([string], [string]))) {
+        $relativePath = [System.IO.Path]::GetRelativePath($resolvedBasePath, $resolvedFullPath)
+    }
+    else {
+        $baseWithSeparator = $resolvedBasePath.TrimEnd('\', '/') + [System.IO.Path]::DirectorySeparatorChar
+        $baseUri = [System.Uri]::new($baseWithSeparator)
+        $fullUri = [System.Uri]::new($resolvedFullPath)
+        $relativePath = $baseUri.MakeRelativeUri($fullUri).ToString()
+        $relativePath = [System.Uri]::UnescapeDataString($relativePath)
+    }
 
     return $relativePath.Replace('\', '/')
 }
@@ -331,6 +341,13 @@ $currentApiAlias = Get-ApiAlias -ProjectsNamespaceValue $projectsNamespaceTrimme
 $currentNamespaceCompact = $projectsNamespaceTrimmed -replace '[^A-Za-z0-9]', ''
 $currentNamespaceDisplayName = ConvertTo-DisplayName -InputValue $projectsNamespaceTrimmed
 $currentNamespaceKebab = ConvertTo-KebabCase -InputValue $projectsNamespaceTrimmed
+$currentNamespaceUpperSnake = [string]::Join('_', ((ConvertTo-WordTokens -InputValue $projectsNamespaceTrimmed) | ForEach-Object { $_.ToUpperInvariant() }))
+$currentServiceName = "$currentNamespaceCompact" + "Service"
+$currentWorkspaceContextConstant = "$currentNamespaceUpperSnake" + "_WORKSPACE_CONTEXT"
+$currentWorkspaceContextClass = "$currentNamespaceCompact" + "WorkspaceContext"
+$currentWorkspaceDataSourceClass = "$currentNamespaceCompact" + "WorkspaceDataSource"
+$currentWorkspaceRepositoryClass = "$currentNamespaceCompact" + "WorkspaceRepository"
+$currentDataSourceInterface = "$currentNamespaceCompact" + "DataSource"
 
 $packageProjectDirectory = Join-Path (Join-Path $solutionDirectory 'src') $projectsNamespaceTrimmed
 $packageProjectPath = Join-Path $packageProjectDirectory "$projectsNamespaceTrimmed.csproj"
@@ -354,8 +371,15 @@ $tokenPairs = @(
     New-TokenPair -Source $currentNamespaceDisplayName -Token '__TEMPLATE_NAMESPACE_DISPLAY_NAME__'
     New-TokenPair -Source $currentNamespaceKebab -Token '__TEMPLATE_NAMESPACE_KEBAB__'
     New-TokenPair -Source $currentNamespaceCompact -Token '__TEMPLATE_NAMESPACE_COMPACT__'
+    New-TokenPair -Source $currentNamespaceUpperSnake -Token '__TEMPLATE_NAMESPACE_UPPER_SNAKE__'
     New-TokenPair -Source $currentApiAlias -Token '__TEMPLATE_API_ALIAS__'
     New-TokenPair -Source $currentApiAlias -Token '__TEMPLATE_NAMESPACE_COMPACT_LOWER__'
+    New-TokenPair -Source $currentServiceName -Token '__TEMPLATE_NAMESPACE_COMPACT__Service'
+    New-TokenPair -Source $currentWorkspaceContextConstant -Token '__TEMPLATE_NAMESPACE_UPPER_SNAKE__WORKSPACE_CONTEXT'
+    New-TokenPair -Source $currentWorkspaceContextClass -Token '__TEMPLATE_NAMESPACE_COMPACT__WorkspaceContext'
+    New-TokenPair -Source $currentWorkspaceDataSourceClass -Token '__TEMPLATE_NAMESPACE_COMPACT__WorkspaceDataSource'
+    New-TokenPair -Source $currentWorkspaceRepositoryClass -Token '__TEMPLATE_NAMESPACE_COMPACT__WorkspaceRepository'
+    New-TokenPair -Source $currentDataSourceInterface -Token '__TEMPLATE_NAMESPACE_COMPACT__DataSource'
     New-TokenPair -Source $solutionName -Token '__TEMPLATE_SOLUTION_NAME__'
     New-TokenPair -Source $solutionDescription -Token '__TEMPLATE_SOLUTION_DESCRIPTION__'
     New-TokenPair -Source $gitHubOrganization -Token '__TEMPLATE_GITHUB_ORGANIZATION__'
@@ -461,12 +485,27 @@ $templateJsonContent = @"
       "replaces": "__TEMPLATE_NAMESPACE_DISPLAY_NAME__"
     },
     "NamespaceKebab": {
-      "type": "derived",
-      "valueSource": "name",
-      "valueTransform": "ReplaceNonAlphanumericWithHyphen",
+      "type": "generated",
+      "generator": "casing",
+      "parameters": {
+        "source": "NamespaceKebabNormalized",
+        "toLower": true
+      },
       "description": "Projects namespace in kebab-case, used for client filenames and imports.",
       "replaces": "__TEMPLATE_NAMESPACE_KEBAB__",
       "fileRename": "__TEMPLATE_NAMESPACE_KEBAB__"
+    },
+    "NamespaceKebabWordBreaks": {
+      "type": "derived",
+      "valueSource": "name",
+      "valueTransform": "InsertWordBreakHyphen",
+      "description": "Projects namespace with word boundaries preserved before kebab normalization."
+    },
+    "NamespaceKebabNormalized": {
+      "type": "derived",
+      "valueSource": "NamespaceKebabWordBreaks",
+      "valueTransform": "ReplaceNonAlphanumericWithHyphen",
+      "description": "Projects namespace with separators normalized to hyphens before lower-casing."
     },
     "NamespaceCompact": {
       "type": "derived",
@@ -495,9 +534,30 @@ $templateJsonContent = @"
       },
       "description": "Lowercase API alias used in controller routes, manifests, and generated client URLs.",
       "replaces": "__TEMPLATE_API_ALIAS__"
+    },
+    "NamespaceUpperSnakeNormalized": {
+      "type": "derived",
+      "valueSource": "NamespaceKebabWordBreaks",
+      "valueTransform": "ReplaceNonAlphanumericWithUnderscore",
+      "description": "Projects namespace with separators normalized to underscores before upper-casing."
+    },
+    "NamespaceUpperSnake": {
+      "type": "generated",
+      "generator": "casing",
+      "parameters": {
+        "source": "NamespaceUpperSnakeNormalized",
+        "toLower": false
+      },
+      "description": "Upper snake case namespace for constant identifiers.",
+      "replaces": "__TEMPLATE_NAMESPACE_UPPER_SNAKE__"
     }
   },
   "forms": {
+    "InsertWordBreakHyphen": {
+      "identifier": "replace",
+      "pattern": "([a-z0-9])([A-Z])",
+      "replacement": "`$1-`$2"
+    },
     "RemoveNonAlphanumeric": {
       "identifier": "replace",
       "pattern": "[^A-Za-z0-9]",
@@ -507,6 +567,11 @@ $templateJsonContent = @"
       "identifier": "replace",
       "pattern": "[^A-Za-z0-9]+",
       "replacement": "-"
+    },
+    "ReplaceNonAlphanumericWithUnderscore": {
+      "identifier": "replace",
+      "pattern": "[^A-Za-z0-9]+",
+      "replacement": "_"
     }
   }
 }

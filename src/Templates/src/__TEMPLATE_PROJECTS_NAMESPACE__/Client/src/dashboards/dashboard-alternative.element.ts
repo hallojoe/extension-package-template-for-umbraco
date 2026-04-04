@@ -11,8 +11,8 @@ import { UMB_NOTIFICATION_CONTEXT } from "@umbraco-cms/backoffice/notification";
 import { UMB_CURRENT_USER_CONTEXT, UmbCurrentUserModel } from "@umbraco-cms/backoffice/current-user";
 import type { UserModel } from "../api/index.js";
 import {
-  __TEMPLATE_WORKSPACE_CONTEXT_CONSTANT__,
-  __TEMPLATE_WORKSPACE_CONTEXT_CLASS__,
+  __TEMPLATE_NAMESPACE_UPPER_SNAKE__WORKSPACE_CONTEXT,
+  __TEMPLATE_NAMESPACE_COMPACT__WorkspaceContext,
 } from "../context/index.js";
 
 @customElement("example-dashboard-alternative")
@@ -30,7 +30,7 @@ export class ExampleDashboardAlternativeElement extends UmbElementMixin(LitEleme
   private _contextCurrentUser?: UmbCurrentUserModel;
 
   #notificationContext?: typeof UMB_NOTIFICATION_CONTEXT.TYPE;
-  #workspaceContext?: __TEMPLATE_WORKSPACE_CONTEXT_CLASS__;
+  #workspaceContext?: __TEMPLATE_NAMESPACE_COMPACT__WorkspaceContext;
 
   #getWorkspaceContext() {
     if (!this.#workspaceContext) {
@@ -61,7 +61,7 @@ export class ExampleDashboardAlternativeElement extends UmbElementMixin(LitEleme
     });
 
     this.consumeContext(
-      __TEMPLATE_WORKSPACE_CONTEXT_CONSTANT__,
+      __TEMPLATE_NAMESPACE_UPPER_SNAKE__WORKSPACE_CONTEXT,
       (workspaceContext) => {
         this.#workspaceContext = workspaceContext;
 

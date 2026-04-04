@@ -1,22 +1,22 @@
 import { UmbControllerBase } from "@umbraco-cms/backoffice/class-api";
 import type { UmbControllerHost } from "@umbraco-cms/backoffice/controller-api";
 import {
-  __TEMPLATE_WORKSPACE_DATASOURCE_CLASS__,
+  __TEMPLATE_NAMESPACE_COMPACT__WorkspaceDataSource,
 } from "./__TEMPLATE_NAMESPACE_KEBAB__.datasource.js";
 import type {
-  __TEMPLATE_DATASOURCE_INTERFACE__,
+  __TEMPLATE_NAMESPACE_COMPACT__DataSource,
 } from "./__TEMPLATE_NAMESPACE_KEBAB__.datasource.js";
 
-export class __TEMPLATE_WORKSPACE_REPOSITORY_CLASS__ extends UmbControllerBase {
-  #dataSource: __TEMPLATE_DATASOURCE_INTERFACE__;
+export class __TEMPLATE_NAMESPACE_COMPACT__WorkspaceRepository extends UmbControllerBase {
+  #dataSource: __TEMPLATE_NAMESPACE_COMPACT__DataSource;
 
   constructor(
     host: UmbControllerHost,
-    dataSource?: __TEMPLATE_DATASOURCE_INTERFACE__,
+    dataSource?: __TEMPLATE_NAMESPACE_COMPACT__DataSource,
   ) {
     super(host);
     this.#dataSource =
-      dataSource ?? new __TEMPLATE_WORKSPACE_DATASOURCE_CLASS__(this);
+      dataSource ?? new __TEMPLATE_NAMESPACE_COMPACT__WorkspaceDataSource(this);
   }
 
   ping() {
@@ -36,4 +36,4 @@ export class __TEMPLATE_WORKSPACE_REPOSITORY_CLASS__ extends UmbControllerBase {
   }
 }
 
-export default __TEMPLATE_WORKSPACE_REPOSITORY_CLASS__;
+export default __TEMPLATE_NAMESPACE_COMPACT__WorkspaceRepository;

@@ -219,6 +219,20 @@ function Invoke-RequiredCommand {
     }
 }
 
+function Get-PowerShellExecutable {
+    $pwshCommand = Get-Command -Name "pwsh" -ErrorAction SilentlyContinue
+    if ($null -ne $pwshCommand) {
+        return $pwshCommand.Source
+    }
+
+    $windowsPowerShellCommand = Get-Command -Name "powershell" -ErrorAction SilentlyContinue
+    if ($null -ne $windowsPowerShellCommand) {
+        return $windowsPowerShellCommand.Source
+    }
+
+    throw "Neither 'pwsh' nor 'powershell' is available on PATH."
+}
+
 function Update-FileText {
     param(
         [Parameter(Mandatory = $true)]
@@ -657,14 +671,16 @@ if ($IncludeClientCodeBlueprint -and -not (Test-Path $applyClientCodeBlueprintSc
     throw "Required script was not found: $applyClientCodeBlueprintScriptPath"
 }
 
-Invoke-RequiredCommand -FilePath "powershell" -ArgumentList @(
+$powerShellExecutable = Get-PowerShellExecutable
+
+Invoke-RequiredCommand -FilePath $powerShellExecutable -ArgumentList @(
     "-ExecutionPolicy", "Bypass",
     "-File", $addUmbracoTestProjectScriptPath,
     "-ProjectsNamespace", $projectsNamespace,
     "-WorkingDirectory", $WorkingDirectory
 ) -WorkingPath $WorkingDirectory
 
-Invoke-RequiredCommand -FilePath "powershell" -ArgumentList @(
+Invoke-RequiredCommand -FilePath $powerShellExecutable -ArgumentList @(
     "-ExecutionPolicy", "Bypass",
     "-File", $addGitHubActionsScriptPath,
     "-ProjectsNamespace", $projectsNamespace,
@@ -694,7 +710,7 @@ if ($IncludeClientCodeBlueprint) {
         $applyBlueprintArguments += @("-AuthorEmail", $authorEmailTrimmed)
     }
 
-    Invoke-RequiredCommand -FilePath "powershell" -ArgumentList $applyBlueprintArguments -WorkingPath $WorkingDirectory
+    Invoke-RequiredCommand -FilePath $powerShellExecutable -ArgumentList $applyBlueprintArguments -WorkingPath $WorkingDirectory
 }
 
 Convert-CSharpFilesToFileScopedNamespaces -TargetDirectory $targetDirectory

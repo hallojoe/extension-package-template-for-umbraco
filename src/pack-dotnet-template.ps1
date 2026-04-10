@@ -157,15 +157,16 @@ if (-not (Test-Path $packageProjectPath)) {
 $templateOutputDirectory = Join-Path $WorkingDirectory "$projectsNamespaceTrimmed.Template"
 $shouldGenerateTemplate = (-not (Test-Path $templateOutputDirectory)) -or $RegenerateTemplate
 if ($shouldGenerateTemplate) {
-    & $generateTemplateScriptPath `
-        -ProjectsNamespace $projectsNamespaceTrimmed `
-        -WorkingDirectory $WorkingDirectory `
-        -TemplateIdentity $TemplateIdentity `
-        -TemplateShortName $TemplateShortName `
-        -Force:$RegenerateTemplate
-
-    if ($LASTEXITCODE -ne 0) {
-        throw "Failed to generate the dotnet template folder."
+    try {
+        & $generateTemplateScriptPath `
+            -ProjectsNamespace $projectsNamespaceTrimmed `
+            -WorkingDirectory $WorkingDirectory `
+            -TemplateIdentity $TemplateIdentity `
+            -TemplateShortName $TemplateShortName `
+            -Force:$RegenerateTemplate
+    }
+    catch {
+        throw "Failed to generate the dotnet template folder. $($_.Exception.Message)"
     }
 }
 

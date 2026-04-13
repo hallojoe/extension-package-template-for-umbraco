@@ -1,49 +1,46 @@
-# `new-extention-package-for-umbraco.ps1`
+# `customize-extention-package-for-umbraco.ps1`
 
-Creates a new Umbraco package starter solution from `Umbraco.Community.Templates.PackageStarter`, then applies the repo's post-processing steps.
+Applies the repo's post-processing steps to a scaffolded Umbraco package starter solution.
 
 ## What It Does
 
-- installs or updates required templates with `--force`
-- forces template post-actions to run with `--allow-scripts Yes`
-- derives a default `ProjectsNamespace` from `SolutionName` when not supplied
+- reads scaffold defaults from `setup-metadata.json`
 - cleans generated `Umbraco.Community.` package naming from selected output files
 - updates generated package metadata from derived API values
-- aligns generated `Umbraco.Cms*` package references to the installed `Umbraco.Templates` version
+- aligns generated `Umbraco.Cms*` package references to the stored `Umbraco.Templates` version
+- optionally builds the scaffolded solution
 - clones `https://github.com/umbraco/Umbraco-CMS-Backoffice-Skills.git` into the generated project under `.agents/skills`
 - adds the test project and GitHub workflow files
 - applies the repo `Templates` overlay by default
 - converts generated C# files to file-scoped namespaces and runs `dotnet format`
-- writes `setup-metadata.json`
 
 ## PowerShell
 
 ```powershell
-.\new-extention-package-for-umbraco.ps1 `
-  -SolutionName "Umbraco Thing" `
+.\customize-extention-package-for-umbraco.ps1 `
   -ProjectsNamespace "My.Company.UmbracoThing" `
+  -SolutionName "Umbraco Thing" `
   -SolutionDescription "Umbraco extension package." `
   -GitHubOrganization "hallojoe" `
   -RepositoryName "umbraco-thing" `
   -AuthorName "Casper Korsgaard" `
   -WorkingDirectory "C:\code\umbraco-extension-package" `
-  -SkipTemplateInstall:$false `
   -SkipBuild:$false `
-  -Force:$true
+  -RunDotNetFormat:$true `
+  -IncludeClientCodeBlueprint:$true
 ```
 
 ## CMD
 
 ```cmd
-new-extention-package-for-umbraco.cmd ^
-  -SolutionName "Umbraco Thing" ^
+customize-extention-package-for-umbraco.cmd ^
   -ProjectsNamespace "My.Company.UmbracoThing" ^
+  -SolutionName "Umbraco Thing" ^
   -SolutionDescription "Umbraco extension package." ^
   -GitHubOrganization "hallojoe" ^
   -RepositoryName "umbraco-thing" ^
   -AuthorName "Casper Korsgaard" ^
-  -WorkingDirectory "C:\code\umbraco-extension-package" ^
-  -Force
+  -WorkingDirectory "C:\code\umbraco-extension-package"
 ```
 
 ## Parameters
@@ -62,40 +59,24 @@ new-extention-package-for-umbraco.cmd ^
 -WorkingDirectory            Optional. Default: current directory
 -IncludeClientCodeBlueprint  Optional switch. Default: true
 -RunDotNetFormat             Optional switch. Default: true
--SkipTemplateInstall         Optional switch. Skip template installation/update
 -SkipBuild                   Optional switch. Skip solution build
--Force                       Optional switch. Delete and recreate the target folder if it already exists
 ```
 
-## Output
+## Behavior
 
-The script creates:
+The script expects:
 
 - `.\<ProjectsNamespace>\`
-- `.\<ProjectsNamespace>\.agents\skills\`
 - `.\<ProjectsNamespace>\setup-metadata.json`
+- `.\<ProjectsNamespace>\src\<ProjectsNamespace>\<ProjectsNamespace>.csproj`
 
-The metadata file includes:
+It updates:
 
-- `solutionName`
-- `solutionDescription`
-- `projectsNamespace`
-- `gitHubOrganization`
-- `repositoryName`
-- `authorName`
-- `authorOrganizationName`
-- `authorOrganizationUrl`
-- `authorEmail`
-- `apiName`
-- `apiGroup`
-- `apiDescription`
-- `apiOrganizationName`
-- `apiOrganizationUrl`
-- `apiContactEmail`
-- `umbracoTemplateVersion`
-- `targetDirectory`
+- selected readme and project metadata files
+- project package reference versions
+- the generated solution by adding tests, workflows, copied skills, and optional client blueprint content
 
 ## Notes
 
-- The template's own internal post-action may still print restore noise before the script's fix-up steps run.
-- `ProjectsNamespace` is the real generated project root and namespace; use it explicitly when you need dotted namespaces.
+- This is the second phase of the full `new-extention-package-for-umbraco.ps1` workflow.
+- Scaffold first with `scaffold-extention-package-for-umbraco.ps1` or the full orchestrator script.

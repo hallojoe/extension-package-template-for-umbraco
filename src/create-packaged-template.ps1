@@ -1,15 +1,15 @@
 param(
     [string]$SolutionName,
 
-    [string]$SolutionDescription = "Extension package template for Umbraco.",
+    [string]$SolutionDescription,
 
-    [string]$GitHubOrganization = "hallojoe",
+    [string]$GitHubOrganization,
 
     [string]$ProjectsNamespace,
 
     [string]$RepositoryName,
 
-    [string]$AuthorName = "Casper Korsgaard",
+    [string]$AuthorName,
 
     [string]$MetadataFile,
 
@@ -44,6 +44,7 @@ $SolutionDescription = Resolve-StringParameter -BoundParameters $PSBoundParamete
 $GitHubOrganization = Resolve-StringParameter -BoundParameters $PSBoundParameters -ParameterName "GitHubOrganization" -CurrentValue $GitHubOrganization -MetadataObject $metadata -MetadataPropertyNames @("gitHubOrganization")
 $ProjectsNamespace = Resolve-StringParameter -BoundParameters $PSBoundParameters -ParameterName "ProjectsNamespace" -CurrentValue $ProjectsNamespace -MetadataObject $metadata -MetadataPropertyNames @("projectsNamespace")
 $RepositoryName = Resolve-StringParameter -BoundParameters $PSBoundParameters -ParameterName "RepositoryName" -CurrentValue $RepositoryName -MetadataObject $metadata -MetadataPropertyNames @("repositoryName")
+$AuthorName = Resolve-StringParameter -BoundParameters $PSBoundParameters -ParameterName "AuthorName" -CurrentValue $AuthorName -MetadataObject $metadata -MetadataPropertyNames @("authorName")
 $WorkingDirectory = Resolve-WorkingDirectoryParameter -BoundParameters $PSBoundParameters -CurrentValue $WorkingDirectory -MetadataObject $metadata
 
 $scriptRoot = Split-Path -Path $MyInvocation.MyCommand.Path -Parent
@@ -203,12 +204,19 @@ $setupArguments = [ordered]@{
     SolutionName = $solutionNameTrimmed
     SolutionDescription = $SolutionDescription
     GitHubOrganization = $GitHubOrganization
-    AuthorName = $AuthorName
     WorkingDirectory = $WorkingDirectory
 }
 
 if ($repositoryNameTrimmed) {
     $setupArguments.RepositoryName = $repositoryNameTrimmed
+}
+
+if (-not [string]::IsNullOrWhiteSpace($AuthorName)) {
+    $setupArguments.AuthorName = $AuthorName.Trim()
+}
+
+if (-not [string]::IsNullOrWhiteSpace($MetadataFile)) {
+    $setupArguments.MetadataFile = $MetadataFile
 }
 
 if ($ProjectsNamespace) {

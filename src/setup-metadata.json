@@ -13,6 +13,6 @@
     "apiDescription":  "Extension package template for Umbraco.",
     "apiOrganizationName":  "hallojoe",
     "apiOrganizationUrl":  "https://casko.dk/",
-    "apiContactEmail":  "extension-package-template-for-umbraco@localhost",
+    "apiContactEmail":  "casko@localhost",
     "umbracoTemplateVersion":  "17.3.0"
 }

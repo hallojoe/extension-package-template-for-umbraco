@@ -18,15 +18,18 @@ When making changes here:
 
 - treat `src` as the real working area
 - keep the top-level `README.md` aligned with the script-based workflow
-- prefer updating the script docs in `src/README.*.md` when script behavior changes
+- prefer updating the matching script docs in `src/*.md` when script behavior changes
 - preserve the generated-template flow instead of hard-coding project-specific assumptions
 
 ## Important Paths
 
-- `src/README.md`: index of the script documentation
+- `README.md`: overview of the workspace and maintenance workflow
 - `src/new-extention-package-for-umbraco.ps1`: creates a new starter solution
+- `src/new-extention-package-for-umbraco.md`: doc for the starter solution flow
 - `src/sync-project-to-templates.ps1`: promotes generated project changes back into `src/Templates`
+- `src/sync-project-to-templates.md`: doc for syncing generated project changes back into the template
 - `src/create-packaged-template.ps1`: builds a packed template artifact from the maintained template
+- `src/create-packaged-template.md`: doc for the packaged-template workflow
 - `src/Templates/`: the source-of-truth template content that future generated projects inherit
 - `.github/workflows/`: release and publishing automation
 
@@ -35,13 +38,13 @@ When making changes here:
 Before editing:
 
 - read the top-level `README.md`
-- inspect the relevant script doc under `src/README.*.md`
+- inspect the relevant script doc under `src/*.md`
 - check whether the change belongs in scripts, docs, workflow automation, or `src/Templates`
 
 When changing behavior:
 
 - update the script first
-- update the matching `src/README.<script>.md` file if behavior or parameters changed
+- update the matching `src/<script>.md` file if behavior or parameters changed
 - update the top-level `README.md` if the repo workflow changed
 
 When maintaining the template:

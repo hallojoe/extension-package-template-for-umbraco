@@ -219,6 +219,22 @@ function Invoke-RequiredCommand {
     }
 }
 
+function ConvertTo-ProcessArgumentString {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string[]]$ArgumentList
+    )
+
+    return ($ArgumentList | ForEach-Object {
+        if ($_ -match '\s' -or $_ -match '"') {
+            '"' + ($_ -replace '"', '\"') + '"'
+        }
+        else {
+            $_
+        }
+    }) -join ' '
+}
+
 function Get-PowerShellExecutable {
     $pwshCommand = Get-Command -Name "pwsh" -ErrorAction SilentlyContinue
     if ($null -ne $pwshCommand) {
@@ -555,14 +571,128 @@ $templateArgs = @(
     "new",
     "umbracopackagestarter",
     "-n", $projectsNamespace,
-    "--allow-scripts", "Yes",
+    "--allow-scripts", "No",
     "--force",
     "-an", $authorNameTrimmed,
     "-gu", $gitHubOrganizationTrimmed,
     "-gr", $repositoryNameTrimmed
 )
 
-Invoke-RequiredCommand -FilePath "dotnet" -ArgumentList $templateArgs -WorkingPath $WorkingDirectory
+Push-Location $WorkingDirectory
+try {
+    Write-Host "> dotnet $($templateArgs -join ' ')"
+    $stdoutPath = Join-Path ([System.IO.Path]::GetTempPath()) ("umbraco-package-starter-stdout-" + [System.Guid]::NewGuid().ToString("N") + ".log")
+    $stderrPath = Join-Path ([System.IO.Path]::GetTempPath()) ("umbraco-package-starter-stderr-" + [System.Guid]::NewGuid().ToString("N") + ".log")
+    $templateArgumentString = ConvertTo-ProcessArgumentString -ArgumentList $templateArgs
+
+    try {
+        $process = Start-Process -FilePath "dotnet" -ArgumentList $templateArgumentString -WorkingDirectory $WorkingDirectory -Wait -NoNewWindow -PassThru -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath
+        $templateOutput = @()
+
+        if (Test-Path $stdoutPath) {
+            $templateOutput += Get-Content -Path $stdoutPath
+        }
+
+        if (Test-Path $stderrPath) {
+            $templateOutput += Get-Content -Path $stderrPath
+        }
+    }
+    finally {
+        if (Test-Path $stdoutPath) {
+            Remove-Item -Path $stdoutPath -Force
+        }
+
+        if (Test-Path $stderrPath) {
+            Remove-Item -Path $stderrPath -Force
+        }
+    }
+
+    if ($process.ExitCode -notin @(0, 104)) {
+        $templateOutput | ForEach-Object { Write-Host $_ }
+        throw "Command failed with exit code $($process.ExitCode)."
+    }
+
+    $suppressedTemplateOutputPatterns = @(
+        "^Execution of 'Run script' post action is not allowed\.$",
+        "^Description: Setups the project by calling 'setup\.cmd'$",
+        "^Manual instructions: Run 'setup\.cmd'$",
+        "^Actual command: setup\.cmd\s*$",
+        "^For details on the exit code, refer to https://aka\.ms/templating-exit-codes#104$"
+    )
+
+    foreach ($line in $templateOutput) {
+        if ($line -eq "Processing post-creation actions..." -and $process.ExitCode -eq 104) {
+            continue
+        }
+
+        if ($suppressedTemplateOutputPatterns | Where-Object { $line -match $_ }) {
+            continue
+        }
+
+        Write-Host $line
+    }
+
+    if ($process.ExitCode -eq 104) {
+        Write-Host "Starter template created. Skipping the template's built-in setup script and applying the repository setup directly."
+    }
+}
+finally {
+    Pop-Location
+}
+
+$sourceDirectory = Join-Path $targetDirectory "src"
+$packageProjectDirectory = Join-Path $sourceDirectory $projectsNamespace
+$packageProjectPath = Join-Path $packageProjectDirectory "$projectsNamespace.csproj"
+$packageProjectNugetPath = Join-Path $packageProjectDirectory "${projectsNamespace}_nuget.csproj"
+$testSiteProjectPath = Join-Path $sourceDirectory "$projectsNamespace.TestSite\$projectsNamespace.TestSite.csproj"
+$solutionPath = Join-Path $sourceDirectory "$projectsNamespace.slnx"
+
+Invoke-RequiredCommand -FilePath "git" -ArgumentList @("init") -WorkingPath $targetDirectory
+Invoke-RequiredCommand -FilePath "git" -ArgumentList @("branch", "-M", "main") -WorkingPath $targetDirectory
+Invoke-RequiredCommand -FilePath "git" -ArgumentList @("remote", "add", "origin", "https://github.com/$gitHubOrganizationTrimmed/$repositoryNameTrimmed.git") -WorkingPath $targetDirectory
+
+Invoke-RequiredCommand -FilePath "dotnet" -ArgumentList @(
+    "new",
+    "umbraco-extension",
+    "-n", $projectsNamespace,
+    "--site-domain", "https://localhost:44356",
+    "--include-example"
+) -WorkingPath $sourceDirectory
+
+if (-not (Test-Path $packageProjectNugetPath)) {
+    throw "Expected package project file was not found: $packageProjectNugetPath"
+}
+
+if (Test-Path $packageProjectPath) {
+    Remove-Item -Path $packageProjectPath -Force
+}
+
+Rename-Item -Path $packageProjectNugetPath -NewName "$projectsNamespace.csproj"
+
+if (Test-CentralPackageManagementEnabled -DirectoryPath $packageProjectDirectory) {
+    Update-FileText -Path $packageProjectPath -Transform {
+        param($content)
+
+        [System.Text.RegularExpressions.Regex]::Replace(
+            $content,
+            '(<PackageReference\s+Include="Umbraco\.Cms[^"]*")\s+Version="[^"]+"(\s*/>)',
+            '${1}${2}'
+        )
+    }
+}
+
+Invoke-RequiredCommand -FilePath "dotnet" -ArgumentList @("sln", $solutionPath, "add", $packageProjectPath) -WorkingPath $sourceDirectory
+Invoke-RequiredCommand -FilePath "dotnet" -ArgumentList @("add", $testSiteProjectPath, "reference", $packageProjectPath) -WorkingPath $sourceDirectory
+
+$setupCmdPath = Join-Path $targetDirectory "setup.cmd"
+if (Test-Path $setupCmdPath) {
+    Remove-Item -Path $setupCmdPath -Force
+}
+
+$setupShPath = Join-Path $targetDirectory "setup.sh"
+if (Test-Path $setupShPath) {
+    Remove-Item -Path $setupShPath -Force
+}
 
 $metadata = [ordered]@{
     solutionName = $solutionNameTrimmed
@@ -589,7 +719,7 @@ $metadata | ConvertTo-Json -Depth 3 | Set-Content -Path $metadataPath -Encoding 
 
 $githubReadmePath = Join-Path $targetDirectory ".github\README.md"
 $nugetReadmePath = Join-Path $targetDirectory "docs\README_nuget.md"
-$projectFilePath = Join-Path $targetDirectory "src\$projectsNamespace\$projectsNamespace.csproj"
+$projectFilePath = $packageProjectPath
 $packageId = "Umbraco.Community.$projectsNamespace"
 
 Update-FileText -Path $githubReadmePath -Transform {
@@ -620,7 +750,6 @@ Update-FileText -Path $projectFilePath -Transform {
     $updated
 }
 
-$packageProjectDirectory = Split-Path -Path $projectFilePath -Parent
 if (Test-CentralPackageManagementEnabled -DirectoryPath $packageProjectDirectory) {
     Update-FileText -Path $projectFilePath -Transform {
         param($content)
@@ -635,6 +764,11 @@ if (Test-CentralPackageManagementEnabled -DirectoryPath $packageProjectDirectory
 
 $projectFiles = Get-ChildItem -Path (Join-Path $targetDirectory "src") -Recurse -Filter *.csproj -File -ErrorAction SilentlyContinue
 foreach ($projectFile in $projectFiles) {
+    $projectDirectory = Split-Path -Path $projectFile.FullName -Parent
+    if (Test-CentralPackageManagementEnabled -DirectoryPath $projectDirectory) {
+        continue
+    }
+
     Update-FileText -Path $projectFile.FullName -Transform {
         param($content)
 
